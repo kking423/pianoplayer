@@ -23,7 +23,7 @@ class VirtualKeyboard:
 
     def __init__(self, songname=''):
 
-        self.KB = dict()
+        self.KB = {}
         self.vp = None
         self.rightHand = None
         self.leftHand  = None
@@ -99,12 +99,12 @@ class VirtualKeyboard:
                        ).rotateX(70).pos([55,10,6])
 
         for ioct in range(nr_octaves):
-            for ik in range(7):              #white keys
+            for ik in range(7):      #white keys
                 x  = ik * wb + (ioct+1)*keybsize +wb/2
                 tb = Box(pos=(x,-2,0), length=wb-tol, height=1, width=12, c='white')
                 self.KB.update({nts[ik]+str(ioct+1) : tb})
                 self.vp += tb
-                if not nts[ik] in ("E","B"): #black keys
+                if nts[ik] not in ("E", "B"): #black keys
                     tn = Box(pos=(x+wb/2,0,1), length=wb*.6, height=1, width=8, c='black')
                     self.KB.update({nts[ik]+"#"+str(ioct+1) : tn})
                     self.vp += tn

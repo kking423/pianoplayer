@@ -29,14 +29,11 @@ class INote:
 
 #####################################################
 def get_finger_music21(n, j=0):
-    fingers = []
-    for art in n.articulations:
-        if type(art) == Fingering:
-            fingers.append(art.fingerNumber)
-    finger = 0
-    if len(fingers) > j:
-        finger = fingers[j]
-    return finger
+    fingers = [
+        art.fingerNumber for art in n.articulations if type(art) == Fingering
+    ]
+
+    return fingers[j] if len(fingers) > j else 0
 
 
 def reader(sf, beam=0):
@@ -50,9 +47,9 @@ def reader(sf, beam=0):
     elif hasattr(sf, 'elements'):
         if len(sf.elements)==1 and beam==1:
             strm = sf[0]
+        elif len(sf) <= beam:
+            return []
         else:
-            if len(sf) <= beam:
-                return []
             strm = sf[beam]
     else:
         strm = sf.flat
@@ -65,9 +62,7 @@ def reader(sf, beam=0):
 
         if n.duration.quarterLength==0: continue
 
-        if hasattr(n, 'tie'): # address bug https://github.com/marcomusy/pianoplayer/issues/29
-            if n.tie and (n.tie.type == 'continue' or n.tie.type=='stop'): continue
-
+        if hasattr(n, 'tie') and n.tie and n.tie.type in ['continue', 'stop']: continue
         if n.isNote:
             if len(noteseq) and n.offset == noteseq[-1].time:
                 # print "doppia nota", n.name
@@ -97,7 +92,7 @@ def reader(sf, beam=0):
 
         elif n.isChord:
 
-            if n.tie and (n.tie.type=='continue' or n.tie.type=='stop'): continue
+            if n.tie and n.tie.type in ['continue', 'stop']: continue
             sfasam = 0.05 # sfasa leggermente le note dell'accordo
 
             for j, cn in enumerate(n.pitches):
@@ -115,14 +110,8 @@ def reader(sf, beam=0):
                 an.x       = keypos(cn)
                 an.time    = n.offset-sfasam*(len(n.pitches)-j-1)
                 an.duration= n.duration.quarterLength+sfasam*(an.NinChord-1)
-                if hasattr(cn, 'pitch'):
-                    pc = cn.pitch.pitchClass
-                else:
-                    pc = cn.pitchClass
-                if pc in [1, 3, 6, 8, 10]:
-                    an.isBlack = True
-                else:
-                    an.isBlack = False
+                pc = cn.pitch.pitchClass if hasattr(cn, 'pitch') else cn.pitchClass
+                an.isBlack = pc in [1, 3, 6, 8, 10]
                 an.fingering = get_finger_music21(n, j)
                 noteID += 1
                 noteseq.append(an)
@@ -149,8 +138,8 @@ def reader_pretty_midi(pm, beam=0):
         n = pm_notes[ii]
         n_duration = n.end - n.start
         chord_notes = pm_onsets.count(n.start)
+        if n_duration == 0: continue
         if chord_notes != 1:
-            if n_duration == 0: continue
             an        = INote()
             an.noteID += 1
             an.note21 = n
@@ -167,7 +156,6 @@ def reader_pretty_midi(pm, beam=0):
             ii += 1
 
         else:
-            if n_duration == 0: continue
             sfasam = 0.05 # sfasa leggermente le note dell'accordo
 
             for jj in range(chord_notes):
@@ -187,8 +175,7 @@ def reader_pretty_midi(pm, beam=0):
                 an.time    = cn.start-sfasam*jj
                 an.duration = cn_duration + sfasam * (jj - 1)
                 pc = n.pitch % 12
-                if pc in [1, 3, 6, 8, 10]: an.isBlack = True
-                else: an.isBlack = False
+                an.isBlack = pc in [1, 3, 6, 8, 10]
                 noteseq.append(an)
                 ii += 1
 
@@ -224,10 +211,8 @@ def PIG2Stream(fname, beam=0, time_unit=.5, fixtempo=0):
     from music21.articulations import Fingering
     import numpy as np
 
-    f = open(fname, "r")
-    lines = f.readlines()
-    f.close()
-
+    with open(fname, "r") as f:
+        lines = f.readlines()
     #work out note type from distribution of durations
     # triplets are squashed to the closest figure
     durations = []

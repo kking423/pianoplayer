@@ -45,15 +45,8 @@ def soundof(notes, duration=1, volume=0.75, fading=750, wait=True):
         else:
             if isinstance(n, str):
                 n = music21.note.Note(n)
-            if isinstance(n, music21.note.Note):
-                n21 = n
-            else:
-                n21 = n.note21
-            if hasattr(n21, 'pitch'):
-                freq = n21.pitch.frequency
-            else:
-                freq = n21.frequency
-
+            n21 = n if isinstance(n, music21.note.Note) else n.note21
+            freq = n21.pitch.frequency if hasattr(n21, 'pitch') else n21.frequency
         # get timesteps for each sample, duration is note duration in seconds
         t = np.linspace(0, duration, timepoints, False)
 

@@ -60,10 +60,7 @@ class Hand:
             dx = abs(nb.x - self.cfps[fb])  # space travelled by finger fb
             dt = abs(nb.time - na.time) + 0.1  # available time +smoothing term 0.1s
             v = dx / dt  # velocity
-            if nb.isBlack:  # penalty (by increasing speed)
-                v /= self.weights[fb] * self.bfactor[fb]
-            else:
-                v /= self.weights[fb]
+            v /= self.weights[fb] * self.bfactor[fb] if nb.isBlack else self.weights[fb]
             vmean += v
             self.set_fingers_positions(fingering, notes, i)  # update all fingers
 
@@ -119,10 +116,8 @@ class Hand:
                     skipped = True  # non-thumb fingers are crossings, skip
                 elif fb == 1 and nb.isBlack and xba > 0:
                     skipped = True  # crossing thumb goes to black, skip
-            else:  # a is played by thumb:
-                # skip if  a is black  and  b is behind a  and  fb not thumb  and na.duration<2:
-                if na.isBlack and xba < 0 and fb > 1 and na.duration < 2:
-                    skipped = True
+            elif na.isBlack and xba < 0 and fb > 1 and na.duration < 2:
+                skipped = True
 
         elif na.isChord and nb.isChord and na.chordID == nb.chordID:
             axba = abs(xba) * hf / 0.8
@@ -185,40 +180,22 @@ class Hand:
                 if self._skip(f1, f2, n1, n2, self.hf, self.LR, 2): continue
                 for f3 in fingers:
                     if f3 and self._skip(f2, f3, n2, n3, self.hf, self.LR, 3): continue
-                    if depth < 4:
-                        u = [False]
-                    else:
-                        u = fingers
+                    u = [False] if depth < 4 else fingers
                     for f4 in u:
                         if f4 and self._skip(f3, f4, n3, n4, self.hf, self.LR, 4): continue
-                        if depth < 5:
-                            u = [False]
-                        else:
-                            u = fingers
+                        u = [False] if depth < 5 else fingers
                         for f5 in u:
                             if f5 and self._skip(f4, f5, n4, n5, self.hf, self.LR, 5): continue
-                            if depth < 6:
-                                u = [False]
-                            else:
-                                u = fingers
+                            u = [False] if depth < 6 else fingers
                             for f6 in u:
                                 if f6 and self._skip(f5, f6, n5, n6, self.hf, self.LR, 6): continue
-                                if depth < 7:
-                                    u = [False]
-                                else:
-                                    u = fingers
+                                u = [False] if depth < 7 else fingers
                                 for f7 in u:
                                     if f7 and self._skip(f6, f7, n6, n7, self.hf, self.LR, 7): continue
-                                    if depth < 8:
-                                        u = [False]
-                                    else:
-                                        u = fingers
+                                    u = [False] if depth < 8 else fingers
                                     for f8 in u:
                                         if f8 and self._skip(f7, f8, n7, n8, self.hf, self.LR, 8): continue
-                                        if depth < 9:
-                                            u = [False]
-                                        else:
-                                            u = fingers
+                                        u = [False] if depth < 9 else fingers
                                         for f9 in u:
                                             if f9 and self._skip(f8, f9, n8, n9, self.hf, self.LR, 9): continue
                                             c = [f1, f2, f3, f4, f5, f6, f7, f8, f9]
@@ -241,8 +218,8 @@ class Hand:
 
         start_finger, out, vel = 0, [0 for i in range(9)], 0
         N = len(self.noteseq)
-        if self.depth < 3: self.depth = 3
-        if self.depth > 9: self.depth = 9
+        self.depth = max(self.depth, 3)
+        self.depth = min(self.depth, 9)
 
         for i in range(N):  ##############
 
@@ -284,12 +261,11 @@ class Hand:
                 if i < N - 10:
                     print(f"  v={round(vel, 1)}", end='')
                     if self.autodepth:
-                        print("\t " + str(out[0:self.depth]) + " d:" + str(self.depth))
+                        print("\t " + str(out[:self.depth]) + " d:" + str(self.depth))
                     else:
-                        print("\t" + ("   " * (i % self.depth)) + str(out[0:self.depth]))
+                        print("\t" + ("   " * (i % self.depth)) + str(out[:self.depth]))
                 else:
                     print()
-            else:
-                if i and not i % 100 and an.measure:
-                    print('scanned', i, '/', N,
-                          'notes, measure', an.measure + 1, ' for the', self.LR, 'hand...')
+            elif i and not i % 100 and an.measure:
+                print('scanned', i, '/', N,
+                      'notes, measure', an.measure + 1, ' for the', self.LR, 'hand...')
