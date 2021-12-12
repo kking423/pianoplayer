@@ -85,7 +85,7 @@ def annotate_fingers_xml(sf, hand, args, is_right=True):
                 el.articulations.append(Fingering(n.fingering))
             idx += 1
         elif el.isChord:
-            for j, cn in enumerate(el.pitches):
+            for cn in el.pitches:
                 n = hand.noteseq[idx]
                 if hand.lyrics:
                     nl = len(cn.chord21.pitches) - cn.chordnr
@@ -99,12 +99,12 @@ def annotate_fingers_xml(sf, hand, args, is_right=True):
 
 def annotate_PIG(hand, is_right=True):
     ans = []
+    onset_velocity = str(None)
+    offset_velocity = str(None)
     for n in hand.noteseq:
         onset_time = "{:.4f}".format(n.time)
         offset_time = "{:.4f}".format(n.time + n.duration)
         spelled_pitch = n.pitch
-        onset_velocity = str(None)
-        offset_velocity = str(None)
         channel = '0' if is_right else '1'
         finger_number = n.fingering if is_right else -n.fingering
         cost = n.cost
@@ -205,9 +205,9 @@ def annotate(args):
                                          channel, finger_number, cost, id_n])
         else:
             ext = os.path.splitext(args.filename)[1]
-            if ext in ['mid', 'midi']:
+            if ext in ['mid', 'midi'] or ext not in ['txt']:
                 sf = converter.parse(xmlfn)
-            elif ext in ['txt']:
+            else:
                 sf = stream.Stream()
                 if not args.left_only:
                     ptr = PIG2Stream(args.filename, 0)
@@ -215,9 +215,6 @@ def annotate(args):
                 if not args.right_only:
                     ptl = PIG2Stream(args.filename, 1)
                     sf.insert(0, ptl)  # 0=offset
-            else:
-                sf = converter.parse(xmlfn)
-
             # Annotate fingers in XML
             if not args.left_only:
                 sf = annotate_fingers_xml(sf, rh, args, is_right=True)
